@@ -4,11 +4,10 @@
     padding: 0;
 }
 
-
-
 html,
 body
 {
+    height: 100%;
     margin:0;
     overflow: hidden;
     font-family: Helvetica, Arial, Verdana, sans-serif; 
@@ -16,24 +15,24 @@ body
 }
 
 p {
-	font-family: Verdana;
   display: block;
-  margin-block-start: 1em;
-  margin-block-end: 1em;
-  margin-inline-start: 0px;
-  margin-inline-end: 0px;
-  font-size: 0.78rem;
+  font-size: 4.78rem;
 	background-image: none !important;
 }
 
 canvas
 {
-  width:100%;
+  position: absolute;
+  top:0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  margin:auto;
+  z-index:0;
   border-bottom: 2.5px solid rgba(0, 0, 255, 1.0);
   border-top: 2.5px solid rgba(0, 0, 255, 1.0);
   border-left: 2.5px solid rgba(0, 0, 255, 1.0);
   border-right: 2.5px solid rgba(0, 0, 255, 1.0);
-
 
 }
 
@@ -45,6 +44,41 @@ canvas
   float:right;
 }
 
+#sketch {
+  position:relative;
+}
 
+#overlay {
+  position: absolute;
+  height:100%;
+  width:100%;
+  background-image: url("../static/wood.png");
+  background-size: 100% 100%;
+  z-index: 10;
+
+}
+
+#tagcontainer {
+  position: fixed;
+  top: 89%;
+  width:100%;
+  font-family: 'cutehollow';
+  color:red;
+}
+
+#tagname {
+  text-align:center
+}
+
+@font-face {
+  font-family: 'cutehollow';
+  src: url('../static/fonts/queasily-font/QueasilyRegular-YzeDj.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* #tagname {
+  left: 500px;
+} */
 
 
