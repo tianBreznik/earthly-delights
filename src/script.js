@@ -134,7 +134,7 @@ const sketch = function(p) {
     flower:24.5,
     floweryoga:25.0,
     frog:24.5,
-    frogsofa:25.0,
+    frogsofa:15.0,
     garden:8.0,
     hand:20.0,
     eye:25.0,
@@ -604,7 +604,7 @@ const sketch = function(p) {
   //model = new ms.SketchRNN('https://storage.googleapis.com/quickdraw-models/sketchRNN/models/angel.gen.json');
   //var choice = parseInt(Math.random() * nrmodels);
   var choice = 56; //pool
-  previouschoice = 56;
+  previouschoice = choice;
   model = new ms.SketchRNN(`${BASE_URL}${availableModels[choice]}.gen.json`);
   console.log(availableModels[choice]);
   /*
@@ -694,7 +694,7 @@ const sketch = function(p) {
     //p.background(204, 204, 204); //remove if u dont want flashing
     //console.log(modelLoaded);
     if (!modelLoaded) {
-      //console.log("model not loaded");
+      console.log("model not loaded");
       return;
     }
 
@@ -707,17 +707,29 @@ const sketch = function(p) {
     //if (previousPen[PEN.DOWN] == 1) {
     if(drawing & modelLoaded){
         // New state.
-        [dx, dy, ...pen] = sampleNewState();
+        try{
+          [dx, dy, ...pen] = sampleNewState();
+        }
+        catch(err){
+          console.log(err);
+          restart();
+        }
         var d = p.dist(x+dx, y+dy, x, y);
+
+        let c = p.color('red');
+        p.fill(c); 
+        p.strokeWeight(15);
         for (var i = 1; i < d; i++) {
+          p.point(x + dx - i * (dx / d),y + dy - i * (dy / d));
           soak(brush, x + dx - i * (dx / d), y + dy - i * (dy / d));
         }
+        p.point(x+dx, y+dy);
         soak(brush, x+dx, y+dy);
 
       for (var i = 0; i < w * h; i++) {
-		if (inkels[i].wetness >= 3) inkels[i].wetness -=3;
+		    if (inkels[i].wetness >= 3) inkels[i].wetness -=3;
         else inkels[i].wetness = 0;
-		if (inkels[i].wetness > 200) {  
+		    if (inkels[i].wetness > 200) {  
             var n = 0;
             var Aa = inkels[i].a;
             var Ar = inkels[i].r;
@@ -744,10 +756,10 @@ const sketch = function(p) {
             inkels[i].a -= n * 0.01 * Aa; 
 		        inkels[i].wetness -= n * 0.05 * wt;
           } //if(inkels[i].wetness > 200)
-          rimg.pixels[4 * i] = 204 * inkels[i].r;
-          rimg.pixels[4 * i + 1] = 204 * inkels[i].g;
-          rimg.pixels[4 * i + 2] = 204 * inkels[i].b;
-          rimg.pixels[4 * i + 3] = 204 * inkels[i].a;
+          rimg.pixels[4 * i] = 255 * inkels[i].r;
+          rimg.pixels[4 * i + 1] = 250 * inkels[i].g;
+          rimg.pixels[4 * i + 2] = 240 * inkels[i].b;
+          rimg.pixels[4 * i + 3] = 255 * inkels[i].a;
         } 
       rimg.updatePixels();
       //console.log(rimg);
@@ -770,6 +782,8 @@ const sketch = function(p) {
     // Using the previous pen states, and hidden state, get next hidden state
     // the below line takes the most CPU power, especially for large models.
     modelState = model.update([dx, dy, ...pen], modelState);
+    console.log("sampled");
+    //console.log(modelState);
 
     // Get the parameters of the probability distribution (pdf) from hidden state.
     const pdf = model.getPDF(modelState, temperature);
@@ -785,7 +799,7 @@ const sketch = function(p) {
     var fieldfactX = randomfielddim[choicekey][0];
     var fieldfactY = randomfielddim[choicekey][1];
     var randomX = getRandomFloat(fieldfactX*screenWidth*(-0.3), fieldfactX*screenWidth*0.7);
-    var randomY = getRandomFloat(fieldfactY*screenHeight*(-0.8), fieldfactY*screenHeight*0.2);
+    var randomY = getRandomFloat(fieldfactY*screenHeight*(-0.5), fieldfactY*screenHeight*0.5);
     x = (modellocationsXY[choicekey][lenchoice][0]*screenWidth + randomX);
     y = (modellocationsXY[choicekey][lenchoice][1]*screenHeight + randomY);
 
@@ -796,21 +810,28 @@ const sketch = function(p) {
     const colorchoice = getRandomInt(0, colorlength - 1);
     var lineColor;
     if(htmlcoloroptions[choicekey][colorchoice] === "any"){
-      console.log("any")
-      lineColor = p.color(p.random(64, 224), p.random(64, 224), p.random(64, 224));
+     console.log("any")
+      r = p.random(1);
+      g = p.random(1);
+      b = p.random(1);
     }
     else{
-    //named color
+    //   //named color
       var hexcolor = colourNameToHex(htmlcoloroptions[choicekey][colorchoice])
       console.log(htmlcoloroptions[choicekey][colorchoice]);
       console.log(hexcolor);
       var rgbcolor = hexToRgb(hexcolor);
-      console.log(rgbcolor.r)
-      lineColor = p.color(rgbcolor.r, rgbcolor.g, rgbcolor.b);
+      if(!rgbcolor && rgbcolor === 'undefined' && rgbcolor === null){
+        console.log("no rgb");
+        r = p.random(1);
+        g = p.random(1);
+        b = p.random(1);
+      }else{
+        r = rgbcolor.r/255.0;
+        g = rgbcolor.g/255.0;
+        b = rgbcolor.b/255.0;
+      }
     }
-
-    //p.strokeWeight(4.0);
-    p.stroke(lineColor);
   }
 
   function restart() {
@@ -819,7 +840,7 @@ const sketch = function(p) {
     [dx, dy, ...pen] = model.zeroInput();  // Reset the pen state.
     modelState = model.zeroState();  // Reset the model state.
     if (model) {
-        //console.log("disposed");
+        console.log("disposed");
         model.dispose();
     }
 
@@ -839,15 +860,15 @@ const sketch = function(p) {
     //var choice = 72;
     console.log(availableModels[previouschoice]);
     tagpar.innerHTML = availableModels[previouschoice];
-    console.log(modelbrushdiams[availableModels[previouschoice]]);
+    console.log("brush: " + modelbrushdiams[availableModels[previouschoice]]);
+    console.log("size: " + modelpixelsizes[availableModels[previouschoice]]);
     model = new ms.SketchRNN(`${BASE_URL}${availableModels[previouschoice]}.gen.json`);
     Promise.all([model.initialize()]).then(function() {
       modelLoaded = true;
       console.log('SketchRNN model loaded.');
       // Initialize the scale factor for the model. Bigger -> large outputs
-      // [dx, dy, ...pen] = model.zeroInput();  // Reset the pen state.
-      // modelState = model.zeroState();  // Reset the model state. 
-      //*10 reduntant - change source data
+      [dx, dy, ...pen] = model.zeroInput();  // Reset the pen state.
+      modelState = model.zeroState();  // Reset the model state. 
       model.setPixelFactor(modelpixelsizes[availableModels[previouschoice]]);   
     });
   
@@ -857,38 +878,11 @@ const sketch = function(p) {
     brush.loadPixels();
     drawing = true;
     a = p.random(0.3, 0.9);
-    r = p.random(1);
-    g = p.random(1);
-    b = p.random(1);
     setupNewDrawing(availableModels[previouschoice]);
   }
 };
 
 new p5(sketch, 'sketch');
-
-//   function onWindowResize() {
-          
-//       camera.aspect = window.innerWidth / window.innerHeight;
-//       camera.updateProjectionMatrix();
-      
-//   }
-
-//   function onDocumentMouseDown(event) {
-      
-//       event.preventDefault();
-//       var vector = new THREE.Vector3((event.clientX/ window.innerWidth) * 4 - 3, -(event.clientY / window.innerHeight) * 2 + 1, 0.5);
-//       console.log(vector);
-//       vector.unproject(camera);
-//       var raycaster = new THREE.Raycaster(camera.position, vector.sub(camera.position).normalize());
-//       var intersects = raycaster.intersectObjects(objects);
-//       console.log(intersects)
-//       if (intersects.length > 0) {
-//           window.open(intersects[0].object.userData.URL,"_target");
-//           intersects[0].object.material.color = new THREE.Color(0x551abb);
-//           intersects[0].object.material.needsUpdate = true; 
-//       } 
-    
-//   }
 
 function Inkel(index, x, y) {
 	//畫面上此位置對應的index(把畫面拉成直的)
@@ -944,35 +938,7 @@ function soak(brush, x, y) {
       b = (5000 * b + f*inkels[y * w + x].b) / (f+5000);
     }
       
-  }  
-
-  function makeTextSprite(message, parameters) {
-            
-    if (parameters === undefined) parameters = {};
-    var fontface = parameters.hasOwnProperty("fontface") ? parameters["fontface"] : "Arial";
-    var fontsize = parameters.hasOwnProperty("fontsize") ? parameters["fontsize"] : 32;
-    var borderThickness = parameters.hasOwnProperty("borderThickness") ? parameters["borderThickness"] : 1;
-    var borderColor = parameters.hasOwnProperty("borderColor") ?parameters["borderColor"] : { r:0, g:0, b:0, a:1.0 };
-    var backgroundColor = parameters.hasOwnProperty("backgroundColor") ?parameters["backgroundColor"] : { r:255, g:255, b:255, a:1.0 };
-    var textColor = parameters.hasOwnProperty("textColor") ?parameters["textColor"] : { r:0, g:0, b:0, a:1.0 };
-    var canvas = document.createElement('canvas');
-    var context = canvas.getContext('2d');
-    context.font = fontsize + "px " + fontface;
-    var metrics = context.measureText(message);
-    var textWidth = metrics.width;
-    context.fillStyle   = "rgba(" + backgroundColor.r + "," + backgroundColor.g + "," + backgroundColor.b + "," + backgroundColor.a + ")";
-    context.strokeStyle = "rgba(" + borderColor.r + "," + borderColor.g + "," + borderColor.b + "," + borderColor.a + ")";
-    context.lineWidth = borderThickness;
-    context.fillStyle = "rgba("+textColor.r+", "+textColor.g+", "+textColor.b+", 1.0)";
-    context.fillText( message, borderThickness, fontsize + borderThickness);
-    var texture = new THREE.Texture(canvas) 
-    texture.needsUpdate = true;
-    var spriteMaterial = new THREE.SpriteMaterial({ map: texture, useScreenCoordinates: false });
-    var sprite = new THREE.Sprite(spriteMaterial);
-    sprite.scale.set(4 * fontsize, 2 * fontsize, 5 * fontsize);
-    return sprite;  
-        
-}
+}  
 
 function detectMob() {
     return ( ( window.innerWidth <= 500 ) && ( window.innerHeight <= 900 ) );
