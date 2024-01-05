@@ -11,14 +11,14 @@ var drawing = false;
 var w, h,brw,brh;
 var x0, y0;
 var a, r, g, b;
-var dia=30.0;
+var dia=4.0;
 var previouschoice;
 var tagpar;
 var screenWidth, screenHeight;
 const tagtrace = [];
 
 
-const sketch = function(p) {
+const sketch1 = function(p) {
   //setup brush 
   const BASE_URL = 'https://storage.googleapis.com/quickdraw-models/sketchRNN/models/';
   const availableModels = [
@@ -81,7 +81,6 @@ const sketch = function(p) {
     'pool',
     'rabbit',
     'rabbitturtle',
-    'rain',
     'rhinoceros',
     'sea_turtle',
     'sheep',
@@ -159,10 +158,9 @@ const sketch = function(p) {
     pig:8.3,
     pigsheep:10.6,
     pineapple:30.2,
-    pool:1.2,
+    pool:2.5,
     rabbit:18.3,
     rabbitturtle:17.6,
-    rain:15.0,
     rhinoceros:5.0,
     sea_turtle:16.0,
     sheep:13.0,
@@ -181,6 +179,86 @@ const sketch = function(p) {
     windmill:3.0,
     yoga:15.0,
     yogabicycle:18.0,
+  }
+  
+  const modelbrushdiams = {
+    bird:1.0,
+    ant:0.5,
+    angel:2.0,
+    backpack:1.0,
+    barn:3.5,
+    basket:1.0,
+    bear:3.0,
+    bee:0.8,
+    beeflower:0.8,
+    bicycle:2.0,
+    book:1.0,
+    bus:3.0,
+    butterfly:3.5,
+    cactus:2.0,
+    castle:4.0,
+    cat:1.5,
+    catbus:1.4,
+    chair:1.5,
+    couch:2.5,
+    crab:1.5,
+    diving_board:2.0,
+    dog:1.5,
+    dogbunny:1.0,
+    dolphin:2.0,
+    duck:1.6,
+    elephant:3.0,
+    everything:4.0,
+    flamingo:2.0,
+    flower:1.1,
+    floweryoga:2.0,
+    frog:1.0,
+    frogsofa:2.0,
+    garden:2.0,
+    hand:1.0,
+    eye:1.0,
+    hedgeberry:1.0,
+    hedgehog:2.0,
+    kangaroo:2.0,
+    key:0.8,
+    lantern:1.0,
+    lighthouse:2.0,
+    lion:2.0,
+    lionsheep:1.5,
+    lobster:1.4,
+    map:3.0,
+    mermaid:1.5,
+    monkey:1.5,
+    octopus:1.0,
+    owl:1.4,
+    palm_tree:2.0,
+    parrot:1.0,
+    peas:4.0,
+    penguin:1.0,
+    pig:2.0,
+    pigsheep:2.0,
+    pineapple:2.0,
+    pool:20.0,
+    rabbit:1.0,
+    rabbitturtle:1.0,
+    rhinoceros:1.0,
+    sea_turtle:1.0,
+    sheep:1.0,
+    skull:1.0,
+    snail:1.0,
+    snowflake:1.0,
+    spider:1.0,
+    squirrel:1.0,
+    strawberry:0.8,
+    swan:1.0,
+    swing_set:6.0,
+    tractor:2.5,
+    trombone:1.6,
+    truck:3.0,
+    whale:2.0,
+    windmill:2.0,
+    yoga:3.0,
+    yogabicycle:2.0,
   }
 
   const maxnrofiterations = {
@@ -243,7 +321,6 @@ const sketch = function(p) {
     pool:1,
     rabbit:3,
     rabbitturtle:1,
-    rain:15,
     rhinoceros:1,
     sea_turtle:1,
     sheep:10,
@@ -324,7 +401,6 @@ const sketch = function(p) {
     pool:[0.005, 0.005],
     rabbit:[0.25, 0.25],
     rabbitturtle:[0.2, 0.2],
-    rain:[0.1, 0.1],
     rhinoceros:[0.15, 0.15],
     sea_turtle:[0.1, 0.3],
     sheep:[0.35, 0.2],
@@ -406,7 +482,6 @@ const sketch = function(p) {
     pool:[[0.1, 0.7]],
     rabbit:[[0.5, 0.5]],
     rabbitturtle:[[0.5, 0.5]],
-    rain:[[0.1, 0.1], [0.5, 0.1], [0.8, 0.1]],
     rhinoceros:[[0.5, 0.5]],
     sea_turtle:[[0.1, 0.5]],
     sheep:[[0.35, 0.5],[0.5, 0.7]],
@@ -425,87 +500,6 @@ const sketch = function(p) {
     windmill:[[0.5, 0.7],[0.6, 0.6], [0.8, 0.6]],
     yoga:[[0.5, 0.5]],
     yogabicycle:[[0.5, 0.5]],
-  }
-
-  const modelbrushdiams = {
-    bird:1.0,
-    ant:0.5,
-    angel:2.0,
-    backpack:1.0,
-    barn:10.0,
-    basket:1.0,
-    bear:3.0,
-    bee:1.5,
-    beeflower:1.0,
-    bicycle:2.0,
-    book:1.0,
-    bus:10.0,
-    butterfly:3.5,
-    cactus:2.0,
-    castle:10.0,
-    cat:1.5,
-    catbus:3.0,
-    chair:1.5,
-    couch:2.5,
-    crab:1.5,
-    diving_board:2.0,
-    dog:1.5,
-    dogbunny:1.0,
-    dolphin:2.0,
-    duck:3.0,
-    elephant:3.0,
-    everything:4.0,
-    flamingo:2.0,
-    flower:2.5,
-    floweryoga:2.0,
-    frog:1.0,
-    frogsofa:4.0,
-    garden:2.0,
-    hand:2.0,
-    eye:1.0,
-    hedgeberry:1.0,
-    hedgehog:2.0,
-    kangaroo:2.0,
-    key:2.0,
-    lantern:1.0,
-    lighthouse:2.0,
-    lion:2.0,
-    lionsheep:2.0,
-    lobster:2.0,
-    map:3.0,
-    mermaid:1.5,
-    monkey:1.5,
-    octopus:2.0,
-    owl:2.0,
-    palm_tree:3.0,
-    parrot:1.0,
-    peas:4.0,
-    penguin:1.0,
-    pig:2.0,
-    pigsheep:2.0,
-    pineapple:2.0,
-    pool:50.0,
-    rabbit:1.0,
-    rabbitturtle:1.0,
-    rain:3.0,
-    rhinoceros:1.0,
-    sea_turtle:1.0,
-    sheep:1.0,
-    skull:2.0,
-    snail:1.0,
-    snowflake:1.0,
-    spider:1.0,
-    squirrel:1.0,
-    strawberry:3.0,
-    swan:1.0,
-    swing_set:7.0,
-    tractor:5.5,
-    trombone:1.0,
-    truck:3.0,
-    whale:4.0,
-    windmill:2.0,
-    yoga:3.0,
-    yogabicycle:2.0,
   }
 
   const htmlcoloroptions = {
@@ -568,7 +562,6 @@ const sketch = function(p) {
     pool:["dodgerblue","lightseagreen","mediumaquamarine","mediumblue","mediumturquoise","royalblue","turquoise","aqua","aquamarine"],
     rabbit:["white","beige","floralwhite","burlywood","blanchedalmond","black","peru","pink","rosybrown","saddlebrown","sandybrown","gray","grey"],
     rabbitturtle:["any"],
-    rain:["slateblue","steelblue","skyblue","royalblue","powderblue","mediumblue","dodgerblue","darkblue","blue"],
     rhinoceros:["lightgray","lightgrey","lightslategray","lightslategrey","slategray","slategrey","gray","grey","dimgray","dimgrey"],
     sea_turtle:["darkgreen","darkolivegreen","darkkhaki","darkseagreen","forestgreen","grey","green"],
     sheep:["any"],
@@ -624,10 +617,10 @@ const sketch = function(p) {
     screenHeight = window.innerHeight * 0.725;
     var canvas = p.createCanvas(screenWidth, screenHeight);
     canvas.id = "drawing";
-    p.frameRate(20);
+    p.frameRate(60);
 
-    brw=brush.width/10;
-    brh=brush.height/10;
+    brw=brush.width;
+    brh=brush.height;
     p.imageMode(p.CENTER);
 
     w = window.innerWidth;
@@ -714,6 +707,7 @@ const sketch = function(p) {
           console.log(err);
           restart();
         }
+
         var d = p.dist(x+dx, y+dy, x, y);
 
         let c = p.color('red');
@@ -821,7 +815,7 @@ const sketch = function(p) {
       console.log(htmlcoloroptions[choicekey][colorchoice]);
       console.log(hexcolor);
       var rgbcolor = hexToRgb(hexcolor);
-      if(!rgbcolor && rgbcolor === 'undefined' && rgbcolor === null){
+      if(!rgbcolor || rgbcolor === 'undefined' || rgbcolor === null){
         console.log("no rgb");
         r = p.random(1);
         g = p.random(1);
@@ -873,7 +867,7 @@ const sketch = function(p) {
     });
   
 
-    dia = modelbrushdiams[availableModels[previouschoice]]
+    dia = modelbrushdiams[availableModels[previouschoice]]/4;
     brush.resize(dia * brw, dia * brh);
     brush.loadPixels();
     drawing = true;
@@ -882,7 +876,37 @@ const sketch = function(p) {
   }
 };
 
-new p5(sketch, 'sketch');
+new p5(sketch1, 'sketch');
+
+var sketch2 = function( p ) {
+
+  const lower = 0x1F400;
+  const upper = 0x1F441;
+
+  p.setup = function() {
+
+    screenWidth = window.innerWidth*0.81;
+    screenHeight = window.innerHeight * 0.725;
+    var canvas = p.createCanvas(screenWidth, screenHeight);
+    canvas.id = "drawing";
+    p.frameRate(0.1);
+ }
+ p.draw = function() {
+    //for canvas 2
+    //pick random emoji (reuse r channel for the random number)
+    let emojisize = p.random(0.5, 50);
+    let code = p.int(p.map(p.random(1), 0, 1, lower, upper));
+    let chr = String.fromCodePoint(code);
+    //set text (emoji) size
+    p.textSize(emojisize);
+    //draw emoji
+    p.text(chr, p.random(1)*screenWidth, p.random()*screenHeight);
+    //p.filter(p.BLUR, 2);
+ }
+};
+
+// create the second instance of p5 and pass in the function for sketch 2
+new p5(sketch2, "emojiover");
 
 function Inkel(index, x, y) {
 	//畫面上此位置對應的index(把畫面拉成直的)
