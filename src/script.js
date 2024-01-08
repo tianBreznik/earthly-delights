@@ -1,26 +1,49 @@
+/*
+Made by Tian Breznik, 7th of January 2024
+Running on HTML Energy, inspired by 
+Laurel Schwulst
+
+a garden doodle - a little framed webpage an ai trying to doodle a garden !
+
+A machine learning model, trained on doodle prompts, drawn by people is
+used to try to draw something resembling a painting of a garden. The system is 
+based on SketchRNN, a recurrent neural network trained on doodles. There are 
+multiple trained models on different prompts for the user, for example, "cat", 
+"bus", "whale", "basket" and so on. This project aims to compose all of these 
+doodles into one painting composition that tries to represent a garden. I focus
+on detail, textures big and small to try to give the viewer a sense of richness
+in the "painting". The viewer watches the painting being drawn in real time.
+
+See it running at:
+https://tianbreznik.github.io/earthly-delights/
+*/
+
 import './style.css';
 import * as ms from "@magenta/sketch";
-//const gui = new dat.GUI();
 
-//Watercolor simplified simulation Pierre MARZIN 04/2017
+//declare necessary variables
 var rimg, brush;
-var background;
 let model;
 var inkels;
 var drawing = false;
 var w, h,brw,brh;
-var x0, y0;
 var a, r, g, b;
 var dia=4.0;
 var previouschoice;
 var tagpar;
 var screenWidth, screenHeight;
+
+//an array to keep track 
+//of the tags used by the 
+//model
 const tagtrace = [];
 
 
 const sketch1 = function(p) {
-  //setup brush 
+
+  //base url to the collection of models
   const BASE_URL = 'https://storage.googleapis.com/quickdraw-models/sketchRNN/models/';
+  //list of available models
   const availableModels = [
     'bird', 
     'ant',
@@ -100,7 +123,8 @@ const sketch1 = function(p) {
     'yoga',
     'yogabicycle']; 
 
-  //entry: [pixelsize, brush diameters]
+  //dictionary of the relative sizes at which the 
+  //doodles should be drawn at
   const modelpixelsizes = {
     bird:14.0,
     ant:35.5,
@@ -180,7 +204,9 @@ const sketch1 = function(p) {
     yoga:15.0,
     yogabicycle:18.0,
   }
-  
+
+  //dictionary of the brush diameters
+  //with which the model doodles are drawn
   const modelbrushdiams = {
     bird:1.0,
     ant:0.5,
@@ -261,6 +287,8 @@ const sketch1 = function(p) {
     yogabicycle:2.0,
   }
 
+  //the maximum number of times 
+  //a doodle can be redrawn
   const maxnrofiterations = {
     bird:5,
     ant:10,
@@ -341,6 +369,8 @@ const sketch1 = function(p) {
     yogabicycle:1,
   }
 
+  //the size of the region in which
+  //a doodle can be drawn randomly
   const randomfielddim = {
     bird:[0.4, 0.2],
     ant:[0.3, 0.3],
@@ -421,7 +451,8 @@ const sketch1 = function(p) {
     yogabicycle:[0.4, 0.4],
   }
 
-  //redundancy
+  //the locations at which the random field
+  //in which a doodle appears can be anchored
   const modellocationsXY = {
     bird:[[0.1, 0.3], [0.7, 0.1], [0.05, 0.1]],
     ant:[[0.9, 0.8], [0.6, 0.8], [0.5, 0.75]],
@@ -502,6 +533,7 @@ const sketch1 = function(p) {
     yogabicycle:[[0.5, 0.5]],
   }
 
+  //the possible colors each model can have
   const htmlcoloroptions = {
     bird:["brown","black","gray","gold","indianred","snow","peru","rosybrown"],
     ant:["black","maroon", "darkred"],
@@ -626,8 +658,6 @@ const sketch1 = function(p) {
     w = window.innerWidth;
     h = window.innerHeight;
 
-    p.noFill();
-    x0 = y0 = 0;
     inkels = [];
     brush.resize(dia * brush.width, dia * brush.height);
     //Loads the pixel data of the current display window into the pixels[] array.
@@ -651,40 +681,30 @@ const sketch1 = function(p) {
     });
   };
 
-  p.mousePressed = function() {  
-    modelLoaded = false;
-    if (model) {
-        //console.log("disposed");
-        model.dispose();
-    }
-    var choice = parseInt(Math.random() * nrmodels);
-    model = new ms.SketchRNN(`${BASE_URL}${availableModels[choice]}.gen.json`);
-    Promise.all([model.initialize()]).then(function() {
-        modelLoaded = true;
-        //console.log('SketchRNN model loaded.');
-        // Initialize the scale factor for the model. Bigger -> large outputs
-        model.setPixelFactor(modelpixelsizes[availableModels[choice]]);
-        restart();
-    });
-    dia = modelbrushdiams[availableModels[choice]]
-    brush.resize(dia * brw, dia * brh); //add parameters here
-    brush.loadPixels();
-    drawing = true;
-    a = p.random(0.3, 0.9);
-    r = p.random(1);
-    g = p.random(1);
-    b = p.random(1);
+ var click = 0;
+ p.mousePressed = function() { 
+  
+  console.log("pressed");
+  // Set the value of fullscreen 
+  // into the variable 
+  if(click % 2 == 0){
+    screenHeight *= 1.168;
+  }
+  else{
+    screenHeight /= 1.168;
   }
   
-  p.mouseReleased = function() {
-    drawing = false;
-    x0 = p.mouseX;
-    y0 = p.mouseY;
-  }
+  p.resizeCanvas(screenWidth, screenHeight, false); 
+
+
+  let fs = p.fullscreen(); 
+  // Call to fullscreen function 
+  p.fullscreen(!fs);  
+  click += 1;
+} 
 
   // Drawing loop.
   p.draw = function() {
-    //p.background(204, 204, 204); //remove if u dont want flashing
     //console.log(modelLoaded);
     if (!modelLoaded) {
       console.log("model not loaded");
@@ -697,7 +717,6 @@ const sketch1 = function(p) {
     }
 
     // Only draw on the paper if the pen is still touching the paper.
-    //if (previousPen[PEN.DOWN] == 1) {
     if(drawing & modelLoaded){
         // New state.
         try{
@@ -720,6 +739,12 @@ const sketch1 = function(p) {
         p.point(x+dx, y+dy);
         soak(brush, x+dx, y+dy);
 
+      /**
+      *
+      * Watercolor canvas algorithm adapted from sandyaa0313 on the openprocessing forum:
+      * https://openprocessing.org/sketch/1207205
+      * 
+      */
       for (var i = 0; i < w * h; i++) {
 		    if (inkels[i].wetness >= 3) inkels[i].wetness -=3;
         else inkels[i].wetness = 0;
@@ -756,7 +781,6 @@ const sketch1 = function(p) {
           rimg.pixels[4 * i + 3] = 255 * inkels[i].a;
         } 
       rimg.updatePixels();
-      //console.log(rimg);
       p.image(rimg, w/2, h/2);
     }
 
@@ -766,15 +790,11 @@ const sketch1 = function(p) {
 
     // Update the previous pen's state to the current one we just sampled.
     previousPen = pen;
-    //p.filter(p.BLUR, 2.5);
   };
 
-  /*
-   * Helpers.
-   */
+  // Helper function to get next state of model
   function sampleNewState() {
-    // Using the previous pen states, and hidden state, get next hidden state
-    // the below line takes the most CPU power, especially for large models.
+
     modelState = model.update([dx, dy, ...pen], modelState);
     console.log("sampled");
     //console.log(modelState);
@@ -829,7 +849,6 @@ const sketch1 = function(p) {
   }
 
   function restart() {
-    //p.background(204, 204, 204); //remove if u dont want flashing
     modelLoaded = false;
     [dx, dy, ...pen] = model.zeroInput();  // Reset the pen state.
     modelState = model.zeroState();  // Reset the model state.
@@ -891,7 +910,8 @@ var sketch2 = function( p ) {
     canvas.id = "drawing";
     p.frameRate(0.1);
  }
- p.draw = function() {
+
+  p.draw = function() {
     //for canvas 2
     //pick random emoji (reuse r channel for the random number)
     let emojisize = p.random(0.5, 50);
@@ -903,42 +923,79 @@ var sketch2 = function( p ) {
     p.text(chr, p.random(1)*screenWidth, p.random()*screenHeight);
     //p.filter(p.BLUR, 2);
  }
+
+ var click = 0;
+ p.mousePressed = function() { 
+  
+  console.log("pressed");
+  // Set the value of fullscreen 
+  // into the variable 
+  if(click % 2 == 0){
+    screenHeight *= 1.168;
+  }
+  else{
+    screenHeight /= 1.168;
+  }
+  
+  p.resizeCanvas(screenWidth, screenHeight, false); 
+
+
+  let fs = p.fullscreen(); 
+  // Call to fullscreen function 
+  p.fullscreen(!fs);  
+  click += 1;
+} 
+
 };
 
 // create the second instance of p5 and pass in the function for sketch 2
 new p5(sketch2, "emojiover");
 
+/*
+*
+* A class that represents an inkel, a pixel that can be soaked in color.
+* This was adapted from a post from sandyaa0313 on the openprocessing forum:
+* https://openprocessing.org/sketch/1207205
+* 
+*/
 function Inkel(index, x, y) {
-	//畫面上此位置對應的index(把畫面拉成直的)
-    this.index = index;
-	//不知道啥，顏料的量(amount)
-    this.a = 1;
-	//一開始畫布是乾的，wetness=0
-    this.wetness = 0;
+
+  this.index = index;
+
+  this.a = 1;
+
+  this.wetness = 0;
 	//red, green, blue
-    this.r = 1;
+  this.r = 1;
 	this.g = 1;
 	this.b = 1;
 	//position
-    this.x = x;
-    this.y = y;
+  this.x = x;
+  this.y = y;
 }
 
+/*
+*
+* A method that soaks the canvas with ink at point x, y with a brush of a given diameter.
+* This was adapted from a post from sandyaa0313 on the openprocessing forum:
+* https://openprocessing.org/sketch/1207205
+* 
+*/
 function soak(brush, x, y) {
     x = parseInt(x);
     y = parseInt(y);
-      //對於brush的每個位置
+
       for (var i = 0; i < brush.width; i++) {
         for (var j = 0; j < brush.height; j++) {
             var locb = 4 * (j * brush.width + i);
             var loc = (y + j - brush.height / 2) * w + (x + i - brush.width / 2);
         if (inkels[loc]) {  
           var Ba = inkels[loc].a;
-                  //取得這次筆刷的比例
+
           var Aa = a * brush.pixels[locb + 3] / 255;
-                  //融合的顏色比例
+
           var Ca = Aa + Ba * (1 - Aa);
-                  //此次筆刷顏色
+
           var Ar = r; 
           var Ag = g;
           var Ab = b;
@@ -946,7 +1003,7 @@ function soak(brush, x, y) {
           var Br = inkels[loc].r;
           var Bg = inkels[loc].g;
           var Bb = inkels[loc].b;
-          inkels[loc].wetness += brush.pixels[locb + 3]; // = (inkels[loc].wetness * inkels[loc].amount + b.pixels[locb + 3] * b.pixels[locb + 3]) / (inkels[loc].amount + b.pixels[locb + 3]);
+          inkels[loc].wetness += brush.pixels[locb + 3]; 
           inkels[loc].r = (Ar * Aa + Br * Ba * (1 - Aa)) / Ca;
           inkels[loc].g = (Ag * Aa + Bg * Ba * (1 - Aa)) / Ca;
           inkels[loc].b = (Ab * Aa + Bb * Ba * (1 - Aa)) / Ca;
@@ -964,16 +1021,16 @@ function soak(brush, x, y) {
       
 }  
 
-function detectMob() {
-    return ( ( window.innerWidth <= 500 ) && ( window.innerHeight <= 900 ) );
-}
-
+//more helper functions
+//get random integer within interval
 function getRandomInt(min, max) {
   min = Math.ceil(min);
   max = Math.floor(max);
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+//get random float within range, specified to 
+//a precision of decimals
 function getRandomFloat(min, max, decimals) {
   const str = (Math.random() * (max - min) + min).toFixed(
     decimals,
@@ -982,6 +1039,8 @@ function getRandomFloat(min, max, decimals) {
   return parseFloat(str);
 }
 
+//lookup table for color names to 
+//their coresponding hex codes
 function colourNameToHex(colour)
 {
     var colours = {"aliceblue":"#f0f8ff","antiquewhite":"#faebd7","aqua":"#00ffff","aquamarine":"#7fffd4","azure":"#f0ffff",
@@ -1015,6 +1074,7 @@ function colourNameToHex(colour)
     return false;
 }
 
+//hex to rgb conversion function
 function hexToRgb(hex) {
   var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result ? {
@@ -1024,7 +1084,6 @@ function hexToRgb(hex) {
   } : null;
 }
 
-  
   
 
 
