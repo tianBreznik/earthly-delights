@@ -14,6 +14,9 @@ doodles into one painting composition that tries to represent a garden. I focus
 on detail, textures big and small to try to give the viewer a sense of richness
 in the "painting". The viewer watches the painting being drawn in real time.
 
+It works in two p5 instances. In the first the model doodles and in the second
+little emojies of animals are being drawn as a bonus. 
+
 See it running at:
 https://tianbreznik.github.io/earthly-delights/
 */
@@ -625,47 +628,55 @@ const sketch1 = function(p) {
   let previousPen = [1, 0, 0]; // Previous pen state.
   const PEN = {DOWN: 0, UP: 1, END: 2};
 
-  // Load the model.
-  //model = new ms.SketchRNN('https://storage.googleapis.com/quickdraw-models/sketchRNN/models/angel.gen.json');
-  //var choice = parseInt(Math.random() * nrmodels);
-  var choice = 56; //pool
+  //always start painting by drawing the pool
+  const choice = 56; //pool
   previouschoice = choice;
+
+  // Load the model.
   model = new ms.SketchRNN(`${BASE_URL}${availableModels[choice]}.gen.json`);
   console.log(availableModels[choice]);
-  /*
-   * Main p5 code
-   */
+  
+  // Main p5 code
+
+  //load the brush sprite
   p.preload = function(){
     brush = p.loadImage("brush-3.png");
   }
 
-
+  //setup
   p.setup = function() {
 
-    const containerSize = document.getElementById('sketch').getBoundingClientRect();
+    //get paragraph element to inject tag name into
     tagpar = document.getElementById("tagname");
+
     // Initialize the canvas.
     screenWidth = window.innerWidth*0.81;
     screenHeight = window.innerHeight * 0.725;
     var canvas = p.createCanvas(screenWidth, screenHeight);
-    canvas.id = "drawing";
     p.frameRate(60);
 
+    //set brush dimensions
     brw=brush.width;
     brh=brush.height;
     p.imageMode(p.CENTER);
 
+    //set canvas dimensions and resolution
     w = window.innerWidth;
     h = window.innerHeight;
 
+    //initialize inkels collection
     inkels = [];
+
+    //resize brush according to diameter
     brush.resize(dia * brush.width, dia * brush.height);
     //Loads the pixel data of the current display window into the pixels[] array.
     brush.loadPixels();
+
     //Creates a new PImage (the datatype for storing images)
     rimg = p.createImage(w, h);
     rimg.loadPixels();
 
+    //fill inkels
     for (let i = 0; i < w; i++) {
         for (let j = 0; j < h; j++) {
           var pos = j * w + i;
@@ -673,39 +684,41 @@ const sketch1 = function(p) {
         }
     }
 
+    //initialize model
     model.initialize().then(function() {
       // Initialize the scale factor for the model. Bigger -> large outputs
-      model.setPixelFactor(modelpixelsizes[availableModels[choice]]/10);
+      model.setPixelFactor(modelpixelsizes[availableModels[choice]]);
       modelLoaded = true;
+      //restart to draw
       restart();
     });
   };
 
- var click = 0;
- p.mousePressed = function() { 
+  //handling full screen
+  var click = 0;
+  p.mousePressed = function() { 
+    console.log("pressed");
+    // Set the value of fullscreen 
+    // into the variable 
+    if(click % 2 == 0){
+      screenHeight *= 1.168;
+    }
+    else{
+      screenHeight /= 1.168;
+    }
   
-  console.log("pressed");
-  // Set the value of fullscreen 
-  // into the variable 
-  if(click % 2 == 0){
-    screenHeight *= 1.168;
-  }
-  else{
-    screenHeight /= 1.168;
-  }
-  
-  p.resizeCanvas(screenWidth, screenHeight, false); 
+    p.resizeCanvas(screenWidth, screenHeight, false); 
 
 
-  let fs = p.fullscreen(); 
-  // Call to fullscreen function 
-  p.fullscreen(!fs);  
-  click += 1;
-} 
+    let fs = p.fullscreen(); 
+    // Call to fullscreen function 
+    p.fullscreen(!fs);  
+    click += 1;
+  } 
 
   // Drawing loop.
   p.draw = function() {
-    //console.log(modelLoaded);
+
     if (!modelLoaded) {
       console.log("model not loaded");
       return;
@@ -718,7 +731,8 @@ const sketch1 = function(p) {
 
     // Only draw on the paper if the pen is still touching the paper.
     if(drawing & modelLoaded){
-        // New state.
+        
+        //try getting new state.
         try{
           [dx, dy, ...pen] = sampleNewState();
         }
@@ -727,11 +741,15 @@ const sketch1 = function(p) {
           restart();
         }
 
+        //get distance between points
         var d = p.dist(x+dx, y+dy, x, y);
 
+        //set up bruch indicator (point)
         let c = p.color('red');
         p.fill(c); 
         p.strokeWeight(15);
+
+        //soak the canvas at the points returned by the doodle model
         for (var i = 1; i < d; i++) {
           p.point(x + dx - i * (dx / d),y + dy - i * (dy / d));
           soak(brush, x + dx - i * (dx / d), y + dy - i * (dy / d));
@@ -780,6 +798,7 @@ const sketch1 = function(p) {
           rimg.pixels[4 * i + 2] = 240 * inkels[i].b;
           rimg.pixels[4 * i + 3] = 255 * inkels[i].a;
         } 
+      //update image - update canvas
       rimg.updatePixels();
       p.image(rimg, w/2, h/2);
     }
@@ -795,9 +814,9 @@ const sketch1 = function(p) {
   // Helper function to get next state of model
   function sampleNewState() {
 
+    //update model state
     modelState = model.update([dx, dy, ...pen], modelState);
     console.log("sampled");
-    //console.log(modelState);
 
     // Get the parameters of the probability distribution (pdf) from hidden state.
     const pdf = model.getPDF(modelState, temperature);
@@ -806,23 +825,29 @@ const sketch1 = function(p) {
     return model.sample(pdf);
   }
 
+  //helper function for the composition and aesthetics of the drawing 
+  //takes the tag name (key) as a parameter
   function setupNewDrawing(choicekey) {
 
+    //the number of possible doodlelocations
     const locationlen = modellocationsXY[choicekey].length;
+    //the doodle location choice
     const lenchoice = getRandomInt(0, locationlen-1);
+    //x and y factor components
     var fieldfactX = randomfielddim[choicekey][0];
     var fieldfactY = randomfielddim[choicekey][1];
+    //random x and y coordinates based on random window dimensions 
     var randomX = getRandomFloat(fieldfactX*screenWidth*(-0.3), fieldfactX*screenWidth*0.7);
     var randomY = getRandomFloat(fieldfactY*screenHeight*(-0.5), fieldfactY*screenHeight*0.5);
+    //actual x and y coordinates
     x = (modellocationsXY[choicekey][lenchoice][0]*screenWidth + randomX);
     y = (modellocationsXY[choicekey][lenchoice][1]*screenHeight + randomY);
 
-    console.log(y);
-    console.log(modellocationsXY[choicekey][lenchoice][1]);
-    //color pick
+    //in the same way a color is picked
+    //number of possible colors
     const colorlength = htmlcoloroptions[choicekey].length;
+    //color choice
     const colorchoice = getRandomInt(0, colorlength - 1);
-    var lineColor;
     if(htmlcoloroptions[choicekey][colorchoice] === "any"){
      console.log("any")
       r = p.random(1);
@@ -830,10 +855,10 @@ const sketch1 = function(p) {
       b = p.random(1);
     }
     else{
-    //   //named color
+      //named color to hex
       var hexcolor = colourNameToHex(htmlcoloroptions[choicekey][colorchoice])
       console.log(htmlcoloroptions[choicekey][colorchoice]);
-      console.log(hexcolor);
+      //hex color to rgb
       var rgbcolor = hexToRgb(hexcolor);
       if(!rgbcolor || rgbcolor === 'undefined' || rgbcolor === null){
         console.log("no rgb");
@@ -848,7 +873,10 @@ const sketch1 = function(p) {
     }
   }
 
+  //restart/start doodle
   function restart() {
+    
+    //clear model
     modelLoaded = false;
     [dx, dy, ...pen] = model.zeroInput();  // Reset the pen state.
     modelState = model.zeroState();  // Reset the model state.
@@ -857,11 +885,15 @@ const sketch1 = function(p) {
         model.dispose();
     }
 
+    //check if model has been drawn already
     if(tagtrace.indexOf(availableModels[previouschoice]) < 0){
+      //pick number of times it is going to be drawn
       maxnrofiterations[availableModels[previouschoice]] = getRandomInt(1, maxnrofiterations[availableModels[previouschoice]]);
       tagtrace.push(availableModels[previouschoice]);
     }
 
+    //if doodle should still be drawn, decrease number of draws (and draw doodle)
+    //else choose new doodle
     if(maxnrofiterations[availableModels[previouschoice]]>0){
       console.log(maxnrofiterations[availableModels[previouschoice]])
       maxnrofiterations[availableModels[previouschoice]] -= 1;
@@ -870,11 +902,14 @@ const sketch1 = function(p) {
       var choice = parseInt(Math.random() * nrmodels);
       previouschoice = choice;
     }
-    //var choice = 72;
     console.log(availableModels[previouschoice]);
+    //write doodle name
     tagpar.innerHTML = availableModels[previouschoice];
-    console.log("brush: " + modelbrushdiams[availableModels[previouschoice]]);
-    console.log("size: " + modelpixelsizes[availableModels[previouschoice]]);
+    //debug
+    //console.log("brush: " + modelbrushdiams[availableModels[previouschoice]]);
+    //console.log("size: " + modelpixelsizes[availableModels[previouschoice]]);
+
+    //load new model
     model = new ms.SketchRNN(`${BASE_URL}${availableModels[previouschoice]}.gen.json`);
     Promise.all([model.initialize()]).then(function() {
       modelLoaded = true;
@@ -882,10 +917,11 @@ const sketch1 = function(p) {
       // Initialize the scale factor for the model. Bigger -> large outputs
       [dx, dy, ...pen] = model.zeroInput();  // Reset the pen state.
       modelState = model.zeroState();  // Reset the model state. 
+      //set the doodle size
       model.setPixelFactor(modelpixelsizes[availableModels[previouschoice]]);   
     });
   
-
+    //set the brush diameter multiplier
     dia = modelbrushdiams[availableModels[previouschoice]]/4;
     brush.resize(dia * brw, dia * brh);
     brush.loadPixels();
@@ -897,8 +933,10 @@ const sketch1 = function(p) {
 
 new p5(sketch1, 'sketch');
 
+//second canvas
 var sketch2 = function( p ) {
 
+  //uper and lower limit of the emoji characters (animal range)
   const lower = 0x1F400;
   const upper = 0x1F441;
 
@@ -912,7 +950,7 @@ var sketch2 = function( p ) {
  }
 
   p.draw = function() {
-    //for canvas 2
+
     //pick random emoji (reuse r channel for the random number)
     let emojisize = p.random(0.5, 50);
     let code = p.int(p.map(p.random(1), 0, 1, lower, upper));
@@ -921,30 +959,30 @@ var sketch2 = function( p ) {
     p.textSize(emojisize);
     //draw emoji
     p.text(chr, p.random(1)*screenWidth, p.random()*screenHeight);
-    //p.filter(p.BLUR, 2);
  }
 
- var click = 0;
- p.mousePressed = function() { 
+ //full screen handling
+  var click = 0;
+  p.mousePressed = function() { 
   
-  console.log("pressed");
-  // Set the value of fullscreen 
-  // into the variable 
-  if(click % 2 == 0){
-    screenHeight *= 1.168;
-  }
-  else{
-    screenHeight /= 1.168;
-  }
+    console.log("pressed");
+    // Set the value of fullscreen 
+    // into the variable 
+    if(click % 2 == 0){
+      screenHeight *= 1.168;
+    }
+    else{
+      screenHeight /= 1.168;
+    }
   
-  p.resizeCanvas(screenWidth, screenHeight, false); 
+    p.resizeCanvas(screenWidth, screenHeight, false); 
 
 
-  let fs = p.fullscreen(); 
-  // Call to fullscreen function 
-  p.fullscreen(!fs);  
-  click += 1;
-} 
+    let fs = p.fullscreen(); 
+    // Call to fullscreen function 
+    p.fullscreen(!fs);  
+    click += 1;
+  } 
 
 };
 

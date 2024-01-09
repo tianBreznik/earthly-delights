@@ -16,7 +16,7 @@ body
 
 p {
   display: block;
-  font-size: 4.78rem;
+  font-size: 5.78rem;
 	background-image: none !important;
 }
 
@@ -62,7 +62,7 @@ canvas
 
 #tagcontainer {
   position: fixed;
-  top: 89%;
+  top: 87%;
   width:100%;
   font-family: 'cutehollow';
   color:red;
